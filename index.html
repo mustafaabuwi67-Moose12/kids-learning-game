@@ -101,6 +101,8 @@
       height: 14px;
       background: linear-gradient(to right, #f97316, #fb7185, #f59e0b);
       box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      pointer-events: none;
     }
 
     .letter {
@@ -118,6 +120,10 @@
       box-shadow: 0 10px 16px rgba(0, 0, 0, 0.18);
       user-select: none;
       will-change: transform;
+      z-index: 10;
+      pointer-events: auto;
+      touch-action: none;
+      cursor: pointer;
     }
 
     .letter.pop {
@@ -283,6 +289,7 @@
       const startBtn = document.getElementById("startBtn");
       const restartBtn = document.getElementById("restartBtn");
       const feedback = document.getElementById("feedback");
+      const debugRunId = "pre-fix";
 
       let currentLetter = null;
       let activeBlock = null;
@@ -388,6 +395,9 @@
 
         gameArea.appendChild(block);
         activeBlock = block;
+        // #region agent log
+        fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:debugRunId,hypothesisId:'H3',location:'index.html:391',message:'block spawned with interaction style',data:{letter:currentLetter,overlayDisplay:overlay.style.display,blockPointerEvents:window.getComputedStyle(block).pointerEvents,blockZIndex:window.getComputedStyle(block).zIndex},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
 
         requestAnimationFrame(() => {
           const distance = gameArea.clientHeight - block.clientHeight - 14;
@@ -436,6 +446,9 @@
         updateHud();
 
         scheduleNextSpawn(400);
+        // #region agent log
+        fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:debugRunId,hypothesisId:'H2',location:'index.html:441',message:'game started and overlay hidden',data:{running,overlayDisplay:overlay.style.display},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
       }
 
       function endGame() {
@@ -452,10 +465,18 @@
         if (!running) return;
         const pressed = event.key.toUpperCase();
         if (!/^[A-Z]$/.test(pressed)) return;
+        handleLetterAttempt(pressed, "keyboard");
+      }
 
-        if (!activeBlock || !currentLetter) return;
+      function handleLetterAttempt(attemptedLetter, source) {
+        if (!activeBlock || !currentLetter) {
+          // #region agent log
+          fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:'post-fix',hypothesisId:'H1',location:'index.html:469',message:'attempt ignored because no active block',data:{source,attemptedLetter,activeLetter:currentLetter,running},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
+          return;
+        }
 
-        if (pressed === currentLetter) {
+        if (attemptedLetter === currentLetter) {
           score += 1;
           beep("good");
           showFeedback("Great! +" + 1, "good");
@@ -465,11 +486,17 @@
           currentLetter = null;
           updateHud();
           scheduleNextSpawn(260);
+          // #region agent log
+          fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:'post-fix',hypothesisId:'H1',location:'index.html:483',message:'correct attempt accepted',data:{source,attemptedLetter,newScore:score},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
         } else {
           score -= 1;
           beep("bad");
           showFeedback("Try Again -1", "bad");
           updateHud();
+          // #region agent log
+          fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:'post-fix',hypothesisId:'H1',location:'index.html:492',message:'wrong attempt penalized',data:{source,attemptedLetter,targetLetter:currentLetter,newScore:score},timestamp:Date.now()})}).catch(()=>{});
+          // #endregion
         }
       }
 
@@ -489,11 +516,41 @@
 
       document.addEventListener("keydown", onKeyDown);
 
-      gameArea.addEventListener("click", async () => {
+      gameArea.addEventListener("click", async (event) => {
+        // #region agent log
+        fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:debugRunId,hypothesisId:'H1',location:'index.html:498',message:'game area click received',data:{running,targetTag:'gameArea-listener',activeLetter:currentLetter,hasActiveBlock:Boolean(activeBlock)},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        const target = event.target && event.target.closest ? event.target.closest(".letter") : null;
+        if (running && target) {
+          const tappedLetter = String(target.textContent || "").trim().toUpperCase();
+          handleLetterAttempt(tappedLetter, "click");
+        }
+
         if (audioCtx.state === "suspended") {
           await audioCtx.resume();
         }
       });
+
+      gameArea.addEventListener("pointerdown", (event) => {
+        const target = event.target && event.target.closest ? event.target.closest(".letter") : null;
+        // #region agent log
+        fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:debugRunId,hypothesisId:'H4',location:'index.html:506',message:'pointerdown hit test',data:{running,eventType:event.pointerType,targetClass:event.target && event.target.className ? String(event.target.className) : '',hitLetter:Boolean(target),activeLetter:currentLetter},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+
+        if (!running || !target) return;
+        event.preventDefault();
+        const tappedLetter = String(target.textContent || "").trim().toUpperCase();
+        handleLetterAttempt(tappedLetter, "pointer");
+      }, { passive: false });
+
+      gameArea.addEventListener("touchstart", (event) => {
+        const touch = event.touches && event.touches[0];
+        const hit = touch ? document.elementFromPoint(touch.clientX, touch.clientY) : null;
+        // #region agent log
+        fetch('http://127.0.0.1:7610/ingest/790bccea-a81a-4475-8286-a342f2d0db03',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'5637c4'},body:JSON.stringify({sessionId:'5637c4',runId:debugRunId,hypothesisId:'H5',location:'index.html:514',message:'touchstart top element',data:{running,hitClass:hit && hit.className ? String(hit.className) : '',activeLetter:currentLetter,overlayDisplay:overlay.style.display},timestamp:Date.now()})}).catch(()=>{});
+        // #endregion
+      }, { passive: true });
 
       setInterval(increaseDifficulty, 700);
 
