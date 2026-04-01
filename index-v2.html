@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alphabet Drop - Kids Learning Game</title>
+  <style>
+    :root {
+      --bg-a: #7dd3fc;
+      --bg-b: #a78bfa;
+      --bg-c: #f9a8d4;
+      --panel: rgba(255, 255, 255, 0.85);
+      --text-dark: #1f2937;
+      --good: #16a34a;
+      --bad: #dc2626;
+      --lead-accent: #8b5cf6;
+      --lead-accent-2: #ec4899;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+      font-family: "Baloo 2", "Comic Sans MS", "Trebuchet MS", system-ui, sans-serif;
+      color: var(--text-dark);
+    }
+
+    body {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.35) 0, rgba(255, 255, 255, 0) 32%),
+        radial-gradient(circle at 80% 30%, rgba(255, 255, 255, 0.28) 0, rgba(255, 255, 255, 0) 35%),
+        linear-gradient(140deg, var(--bg-a), var(--bg-b) 52%, var(--bg-c));
+      display: grid;
+      place-items: center;
+      padding: 14px;
+      overflow-x: hidden;
+      overflow-y: auto;
+    }
+
+    .wrap {
+      width: min(760px, 100%);
+      display: grid;
+      gap: 12px;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 2px solid rgba(255, 255, 255, 0.7);
+      border-radius: 18px;
+      padding: 10px 12px;
+      box-shadow: 0 8px 24px rgba(31, 41, 55, 0.15);
+      text-align: center;
+      backdrop-filter: blur(3px);
+    }
+
+    .label {
+      font-size: 0.9rem;
+      opacity: 0.85;
+      margin: 0 0 4px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .value {
+      margin: 0;
+      font-weight: 800;
+      line-height: 1.1;
+      font-size: clamp(1.2rem, 3.4vw, 1.9rem);
+    }
+
+    .game {
+      position: relative;
+      height: min(70vh, 520px);
+      border-radius: 24px;
+      background:
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.22)),
+        repeating-linear-gradient(
+          to right,
+          rgba(255, 255, 255, 0.2) 0 2px,
+          rgba(255, 255, 255, 0) 2px 54px
+        );
+      border: 3px solid rgba(255, 255, 255, 0.75);
+      overflow: hidden;
+      box-shadow: 0 18px 40px rgba(17, 24, 39, 0.2);
+      touch-action: manipulation;
+    }
+
+    .ground {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 14px;
+      background: linear-gradient(to right, #f97316, #fb7185, #f59e0b);
+      box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .letter {
+      position: absolute;
+      width: clamp(56px, 12vw, 74px);
+      aspect-ratio: 1;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: clamp(1.7rem, 4.7vw, 2.5rem);
+      text-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+      border: 3px solid rgba(255, 255, 255, 0.88);
+      box-shadow: 0 10px 16px rgba(0, 0, 0, 0.18);
+      user-select: none;
+      will-change: transform;
+      z-index: 10;
+      pointer-events: auto;
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    .letter.pop {
+      animation: pop 280ms ease-out forwards;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(1); opacity: 1; }
+      65% { transform: scale(1.24); opacity: 1; }
+      100% { transform: scale(0.6); opacity: 0; }
+    }
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 16px;
+      background: rgba(15, 23, 42, 0.26);
+      z-index: 20;
+    }
+
+    .overlay-panel {
+      width: min(440px, 100%);
+      background: rgba(255, 255, 255, 0.94);
+      border-radius: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.2);
+      padding: 18px 14px;
+    }
+
+    .overlay h1 {
+      margin: 2px 0 8px;
+      font-size: clamp(1.35rem, 5vw, 2rem);
+      color: #4f46e5;
+    }
+
+    .overlay p {
+      margin: 0 0 14px;
+      font-size: clamp(0.96rem, 3.2vw, 1.08rem);
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 20px;
+      background: linear-gradient(120deg, #f43f5e, #8b5cf6);
+      color: white;
+      font-size: 1rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(139, 92, 246, 0.35);
+      transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(1px); }
+
+    .controls {
+      display: flex;
+      justify-content: center;
+      margin-top: 10px;
+    }
+
+    .feedback {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 8px 14px;
+      border-radius: 999px;
+      color: white;
+      font-weight: 800;
+      opacity: 0;
+      transition: opacity 200ms ease;
+      z-index: 15;
+      pointer-events: none;
+    }
+
+    .feedback.show {
+      opacity: 1;
+    }
+
+    .feedback.good { background: var(--good); }
+    .feedback.bad { background: var(--bad); }
+
+    .keyboard-tip {
+      text-align: center;
+      font-size: 0.95rem;
+      color: #1f2937;
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.7);
+      border-radius: 12px;
+      padding: 7px 10px;
+    }
+
+    /* Lead capture — kid-friendly, mobile-first */
+    .lead-capture {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.95), rgba(255, 250, 252, 0.92));
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 22px;
+      padding: 16px 18px 18px;
+      box-shadow: 0 12px 32px rgba(79, 70, 229, 0.12);
+    }
+
+    .lead-capture h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.05rem, 3.8vw, 1.25rem);
+      font-weight: 800;
+      text-align: center;
+      color: #4c1d95;
+      line-height: 1.35;
+    }
+
+    .lead-form {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    .lead-form input[type="email"] {
+      flex: 1 1 200px;
+      min-width: 0;
+      max-width: 100%;
+      padding: 14px 16px;
+      border: 3px solid #e9d5ff;
+      border-radius: 999px;
+      font-size: 1rem;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--text-dark);
+      background: #fff;
+      outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .lead-form input[type="email"]:focus {
+      border-color: var(--lead-accent);
+      box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.25);
+    }
+
+    .lead-form input[type="email"]::placeholder {
+      color: #9ca3af;
+      font-weight: 600;
+    }
+
+    .lead-form .lead-submit {
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 12px 24px;
+      background: linear-gradient(125deg, #a855f7, var(--lead-accent-2));
+      box-shadow: 0 8px 22px rgba(236, 72, 153, 0.35);
+    }
+
+    .lead-form .lead-submit:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .lead-msg {
+      margin-top: 12px;
+      text-align: center;
+      font-size: clamp(1.05rem, 3.5vw, 1.2rem);
+      font-weight: 800;
+      color: #15803d;
+      min-height: 1.5em;
+    }
+
+    .lead-msg.error {
+      color: #b91c1c;
+    }
+
+    .lead-success {
+      display: none;
+      text-align: center;
+      padding: 8px 4px 4px;
+    }
+
+    .lead-success.show {
+      display: block;
+    }
+
+    .lead-success p {
+      margin: 0;
+      font-size: clamp(1.15rem, 4vw, 1.35rem);
+      font-weight: 800;
+      color: #047857;
+    }
+
+    .lead-form-wrap.hidden {
+      display: none;
+    }
+
+    .visually-hidden {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 560px) {
+      .hud {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .hud .card:last-child {
+        grid-column: 1 / -1;
+      }
+
+      .game {
+        height: min(65vh, 460px);
+      }
+
+      .lead-form {
+        flex-direction: column;
+      }
+
+      .lead-form .lead-submit {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="hud">
+      <article class="card">
+        <p class="label">Score</p>
+        <p class="value" id="score">0</p>
+      </article>
+      <article class="card">
+        <p class="label">Target Letter</p>
+        <p class="value" id="targetLetter">-</p>
+      </article>
+      <article class="card">
+        <p class="label">Speed</p>
+        <p class="value" id="speed">1.0x</p>
+      </article>
+    </section>
+
+    <section class="game" id="gameArea" aria-label="Alphabet drop game area">
+      <div class="feedback" id="feedback"></div>
+      <div class="overlay" id="overlay">
+        <div class="overlay-panel">
+          <h1>Alphabet Drop</h1>
+          <p>Press the matching key before the block hits the floor!</p>
+          <button id="startBtn" type="button">Start Game</button>
+        </div>
+      </div>
+      <div class="ground"></div>
+    </section>
+
+    <div class="keyboard-tip">On phones, tap this game area first to open keyboard controls.</div>
+    <div class="controls">
+      <button id="restartBtn" type="button" style="display:none;">Play Again</button>
+    </div>
+
+    <section class="lead-capture" aria-labelledby="lead-heading">
+      <h2 id="lead-heading">Get more fun learning games for your kids!</h2>
+      <div class="lead-form-wrap" id="leadFormWrap">
+        <form class="lead-form" id="leadForm" novalidate>
+          <label class="visually-hidden" for="leadEmail">Parent email</label>
+          <input
+            type="email"
+            id="leadEmail"
+            name="email"
+            autocomplete="email"
+            inputmode="email"
+            placeholder="your@email.com"
+            aria-describedby="leadMsg"
+          />
+          <button type="submit" class="lead-submit" id="leadSubmit">Get Access</button>
+        </form>
+        <p class="lead-msg" id="leadMsg" role="status" aria-live="polite"></p>
+      </div>
+      <div class="lead-success" id="leadSuccess" role="status" aria-live="polite">
+        <p>You're in! 🎉</p>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+      const blockColors = [
+        "#f97316", "#ef4444", "#eab308", "#22c55e", "#06b6d4",
+        "#3b82f6", "#8b5cf6", "#ec4899"
+      ];
+
+      const gameArea = document.getElementById("gameArea");
+      const scoreEl = document.getElementById("score");
+      const targetEl = document.getElementById("targetLetter");
+      const speedEl = document.getElementById("speed");
+      const overlay = document.getElementById("overlay");
+      const startBtn = document.getElementById("startBtn");
+      const restartBtn = document.getElementById("restartBtn");
+      const feedback = document.getElementById("feedback");
+
+      let currentLetter = null;
+      let activeBlock = null;
+      let score = 0;
+      let running = false;
+      let missTimeout = null;
+      let nextSpawnTimeout = null;
+      let spawnDelay = 1250;
+      let speedMultiplier = 1;
+      let startTime = 0;
+
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      function randomLetter() {
+        return letters[Math.floor(Math.random() * letters.length)];
+      }
+
+      function randomColor() {
+        return blockColors[Math.floor(Math.random() * blockColors.length)];
+      }
+
+      function updateHud() {
+        scoreEl.textContent = String(score);
+        targetEl.textContent = currentLetter || "-";
+        speedEl.textContent = speedMultiplier.toFixed(1) + "x";
+      }
+
+      function beep(type) {
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        if (type === "good") {
+          osc.type = "triangle";
+          osc.frequency.setValueAtTime(600, now);
+          osc.frequency.exponentialRampToValueAtTime(900, now + 0.12);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(0.14, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.22);
+        } else {
+          osc.type = "sawtooth";
+          osc.frequency.setValueAtTime(230, now);
+          osc.frequency.exponentialRampToValueAtTime(130, now + 0.15);
+          gain.gain.setValueAtTime(0.0001, now);
+          gain.gain.exponentialRampToValueAtTime(0.12, now + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.22);
+          osc.start(now);
+          osc.stop(now + 0.24);
+        }
+      }
+
+      function showFeedback(text, kind) {
+        feedback.textContent = text;
+        feedback.className = "feedback show " + kind;
+        setTimeout(() => {
+          feedback.className = "feedback";
+        }, 360);
+      }
+
+      function clearTimers() {
+        if (missTimeout) {
+          clearTimeout(missTimeout);
+          missTimeout = null;
+        }
+        if (nextSpawnTimeout) {
+          clearTimeout(nextSpawnTimeout);
+          nextSpawnTimeout = null;
+        }
+      }
+
+      function removeActiveBlock() {
+        if (activeBlock && activeBlock.parentNode) {
+          activeBlock.remove();
+        }
+        activeBlock = null;
+      }
+
+      function spawnBlock() {
+        if (!running) return;
+
+        removeActiveBlock();
+        currentLetter = randomLetter();
+        updateHud();
+
+        const block = document.createElement("div");
+        block.className = "letter";
+        block.textContent = currentLetter;
+        block.style.background = randomColor();
+
+        const areaWidth = gameArea.clientWidth;
+        const blockSize = Math.min(74, Math.max(56, areaWidth * 0.12));
+        const maxLeft = Math.max(12, areaWidth - blockSize - 12);
+        const left = Math.floor(Math.random() * maxLeft);
+        block.style.left = left + "px";
+        block.style.top = "-84px";
+
+        const fallDuration = Math.max(850, 2900 / speedMultiplier);
+        block.style.transition = "transform " + fallDuration + "ms linear";
+
+        gameArea.appendChild(block);
+        activeBlock = block;
+
+        requestAnimationFrame(() => {
+          const distance = gameArea.clientHeight - block.clientHeight - 14;
+          block.style.transform = "translateY(" + distance + "px)";
+        });
+
+        missTimeout = setTimeout(() => {
+          if (!running) return;
+          if (!activeBlock || activeBlock !== block) return;
+          score -= 1;
+          beep("bad");
+          showFeedback("Oops! Missed", "bad");
+          removeActiveBlock();
+          currentLetter = null;
+          updateHud();
+          scheduleNextSpawn(280);
+        }, fallDuration);
+      }
+
+      function scheduleNextSpawn(delayOverride) {
+        if (!running) return;
+        const delay = typeof delayOverride === "number" ? delayOverride : spawnDelay;
+        nextSpawnTimeout = setTimeout(spawnBlock, delay);
+      }
+
+      function increaseDifficulty() {
+        if (!running) return;
+        const elapsed = (Date.now() - startTime) / 1000;
+        speedMultiplier = Math.min(2.8, 1 + elapsed / 26);
+        spawnDelay = Math.max(560, 1250 - elapsed * 18);
+        updateHud();
+      }
+
+      function startGame() {
+        running = true;
+        score = 0;
+        speedMultiplier = 1;
+        spawnDelay = 1250;
+        currentLetter = null;
+        startTime = Date.now();
+
+        overlay.style.display = "none";
+        restartBtn.style.display = "none";
+        clearTimers();
+        removeActiveBlock();
+        updateHud();
+
+        scheduleNextSpawn(400);
+      }
+
+      function endGame() {
+        running = false;
+        clearTimers();
+        removeActiveBlock();
+        currentLetter = null;
+        updateHud();
+        overlay.style.display = "grid";
+        restartBtn.style.display = "inline-block";
+      }
+
+      function onKeyDown(event) {
+        if (!running) return;
+        const pressed = event.key.toUpperCase();
+        if (!/^[A-Z]$/.test(pressed)) return;
+        handleLetterAttempt(pressed, "keyboard");
+      }
+
+      function handleLetterAttempt(attemptedLetter, source) {
+        if (!activeBlock || !currentLetter) {
+          return;
+        }
+
+        if (attemptedLetter === currentLetter) {
+          score += 1;
+          beep("good");
+          showFeedback("Great! +" + 1, "good");
+          clearTimeout(missTimeout);
+          activeBlock.classList.add("pop");
+          setTimeout(removeActiveBlock, 180);
+          currentLetter = null;
+          updateHud();
+          scheduleNextSpawn(260);
+        } else {
+          score -= 1;
+          beep("bad");
+          showFeedback("Try Again -1", "bad");
+          updateHud();
+        }
+      }
+
+      startBtn.addEventListener("click", async () => {
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+        startGame();
+      });
+
+      restartBtn.addEventListener("click", async () => {
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+        startGame();
+      });
+
+      document.addEventListener("keydown", onKeyDown);
+
+      gameArea.addEventListener("click", async (event) => {
+        const target = event.target && event.target.closest ? event.target.closest(".letter") : null;
+        if (running && target) {
+          const tappedLetter = String(target.textContent || "").trim().toUpperCase();
+          handleLetterAttempt(tappedLetter, "click");
+        }
+
+        if (audioCtx.state === "suspended") {
+          await audioCtx.resume();
+        }
+      });
+
+      gameArea.addEventListener("pointerdown", (event) => {
+        const target = event.target && event.target.closest ? event.target.closest(".letter") : null;
+
+        if (!running || !target) return;
+        event.preventDefault();
+        const tappedLetter = String(target.textContent || "").trim().toUpperCase();
+        handleLetterAttempt(tappedLetter, "pointer");
+      }, { passive: false });
+
+      gameArea.addEventListener("touchstart", () => {}, { passive: true });
+
+      setInterval(increaseDifficulty, 700);
+
+      setInterval(() => {
+        if (!running) return;
+        if (score <= -10) {
+          showFeedback("Let's restart!", "bad");
+          endGame();
+        }
+      }, 350);
+
+      updateHud();
+
+      /* Lead capture — no reload, isolated from game loop */
+      const leadForm = document.getElementById("leadForm");
+      const leadEmail = document.getElementById("leadEmail");
+      const leadMsg = document.getElementById("leadMsg");
+      const leadFormWrap = document.getElementById("leadFormWrap");
+      const leadSuccess = document.getElementById("leadSuccess");
+      const STORAGE_KEY = "alphabetDropLeadOk";
+
+      function isValidEmail(value) {
+        const v = String(value || "").trim();
+        if (!v) return false;
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+      }
+
+      function showLeadSuccess() {
+        leadFormWrap.classList.add("hidden");
+        leadSuccess.classList.add("show");
+      }
+
+      if (window.localStorage && localStorage.getItem(STORAGE_KEY) === "1") {
+        showLeadSuccess();
+      }
+
+      leadForm.addEventListener("submit", function (e) {
+        e.preventDefault();
+        leadMsg.textContent = "";
+        leadMsg.classList.remove("error");
+
+        const email = leadEmail.value.trim();
+        if (!isValidEmail(email)) {
+          leadMsg.textContent = "Please enter a valid email address.";
+          leadMsg.classList.add("error");
+          return;
+        }
+
+        try {
+          localStorage.setItem(STORAGE_KEY, "1");
+        } catch (err) {
+          /* ignore quota / private mode */
+        }
+
+        showLeadSuccess();
+      });
+    })();
+  </script>
+</body>
+</html>
